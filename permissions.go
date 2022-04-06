@@ -11,6 +11,28 @@ type PermissionsService struct {
 	client *Client
 }
 
+type BulkProjectPermissions struct {
+	Permission   string `json:"permission"`
+	ProjectIDs   []int  `json:"projects"`
+	IssueTypeIDs []int  `json:"issues"`
+}
+
+type BulkPermissions struct {
+	ProjectPermissions []*BulkProjectPermissions `json:"projectPermissions"`
+	GlobalPermissions  []string                  `json:"globalPermissions"`
+}
+type requestProjectPermission struct {
+	Permissions  []string `json:"permissions"`
+	ProjectIDs   []int    `json:"projects"`
+	IssueTypeIDs []int    `json:"issues"`
+}
+
+type requestBulkPermissions struct {
+	AccountID          string                     `json:"accountId,omitempty"`
+	GlobalPermissions  []string                   `json:"globalPermissions,omitempty"`
+	ProjectPermissions []requestProjectPermission `json:"projectPermissions,omitempty"`
+}
+
 // GetBulkPermissionsWithContext takes a list of projects with issue type IDs and
 // returns permissions given user (or currently-authed user if that is not set)
 // is granted on those projects and issue types. globalPermissions can also be
