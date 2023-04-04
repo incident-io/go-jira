@@ -3,45 +3,71 @@ name: Tests
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
   workflow_dispatch:
   schedule:
     - cron: "5 1 * * *"
 
 jobs:
-  test:
-    name: Test and lint
+  unit-test:
+    name: Unit tests
     strategy:
       fail-fast: false
       matrix:
-        go-version: [ '1.18', '1.17' ]
-        os: ["windows-latest", "ubuntu-latest", "macOS-latest"]
+        go: [ '1.19', '1.18' ]
+        os: [ 'windows-latest', 'ubuntu-latest', 'macOS-latest' ]
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: ${{ matrix.go }}
 
-      # Caching go modules to speed up the run
-      - uses: actions/cache@v3.0.1
+      - name: Run Unit tests (Go ${{ matrix.go }})
+        run: make test
+
+  fmt:
+    name: go fmt
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: 1.19
 
-      - name: Run go fmt
+      - name: Run go fmt (Go ${{ matrix.go }})
         if: runner.os != 'Windows'
         run: diff -u <(echo -n) <(gofmt -d -s .)
+
+  vet:
+    name: go vet
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
 
       - name: Run go vet
         run: make vet
 
-      - name: Run staticcheck
-        run: make staticcheck
+  staticcheck:
+    name: staticcheck
+    runs-on: ubuntu-latest
 
-      - name: Run Unit tests.
-        run: make test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: Run staticcheck (Go ${{ matrix.go }})
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          version: "2022.1"
+          install-go: false
+          cache-key: staticcheck-cache
