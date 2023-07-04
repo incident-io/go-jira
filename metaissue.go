@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/go-querystring/query"
+	"github.com/pkg/errors"
 	"github.com/trivago/tgo/tcontainer"
 )
 
@@ -59,29 +60,51 @@ func (s *IssueService) GetCreateMeta(projectkeys string) (*CreateMetaInfo, *Resp
 }
 
 // GetCreateMetaWithOptionsWithContext makes the api call to get the meta information without requiring to have a projectKey
-func (s *IssueService) GetCreateMetaWithOptionsWithContext(ctx context.Context, options *GetQueryOptions) (*CreateMetaInfo, *Response, error) {
-	apiEndpoint := "rest/api/2/issue/createmeta"
+func (s *IssueService) GetCreateMetaWithOptionsWithContext(ctx context.Context, options *GetQueryOptions, useLegacyQueryParams bool) (*CreateMetaInfo, *Response, error) {
+	if useLegacyQueryParams {
 
-	req, err := s.client.NewRequestWithContext(ctx, "GET", apiEndpoint, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	if options != nil {
-		q, err := query.Values(options)
+		apiEndpoint := "rest/api/2/issue/createmeta"
+
+		req, err := s.client.NewRequestWithContext(ctx, "GET", apiEndpoint, nil)
 		if err != nil {
 			return nil, nil, err
 		}
-		req.URL.RawQuery = q.Encode()
+		if options != nil {
+			q, err := query.Values(options)
+			if err != nil {
+				return nil, nil, err
+			}
+			req.URL.RawQuery = q.Encode()
+		}
+
+		meta := new(CreateMetaInfo)
+		resp, err := s.client.Do(req, meta)
+
+		if err != nil {
+			return nil, resp, err
+		}
+
+		return meta, resp, nil
+	} else {
+		// If we're using the v9+ API, the fields query params have been deprecated (we just get everything back every time)
+		// The caveat is we now _must_ have a project key
+		if options.ProjectKeys == "" {
+			return nil, nil, errors.New("Must specify a project key for jira versions 9+")
+		}
+		apiEndpoint := fmt.Sprintf("rest/api/2/issue/createmeta/%s/issuetypes", options.ProjectKeys)
+		req, err := s.client.NewRequestWithContext(ctx, "GET", apiEndpoint, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		meta := new(CreateMetaInfo)
+		resp, err := s.client.Do(req, meta)
+
+		if err != nil {
+			return nil, resp, err
+		}
+
+		return meta, resp, nil
 	}
-
-	meta := new(CreateMetaInfo)
-	resp, err := s.client.Do(req, meta)
-
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return meta, resp, nil
 }
 
 // GetCreateMetaWithOptions wraps GetCreateMetaWithOptionsWithContext using the background context.
@@ -148,19 +171,21 @@ func (p *MetaProject) GetIssueTypeWithName(name string) *MetaIssueType {
 
 // GetMandatoryFields returns a map of all the required fields from the MetaIssueTypes.
 // if a field returned by the api was:
-// "customfield_10806": {
-//					"required": true,
-//					"schema": {
-//						"type": "any",
-//						"custom": "com.pyxis.greenhopper.jira:gh-epic-link",
-//						"customId": 10806
-//					},
-//					"name": "Epic Link",
-//					"hasDefaultValue": false,
-//					"operations": [
-//						"set"
-//					]
-//				}
+//
+//	"customfield_10806": {
+//						"required": true,
+//						"schema": {
+//							"type": "any",
+//							"custom": "com.pyxis.greenhopper.jira:gh-epic-link",
+//							"customId": 10806
+//						},
+//						"name": "Epic Link",
+//						"hasDefaultValue": false,
+//						"operations": [
+//							"set"
+//						]
+//					}
+//
 // the returned map would have "Epic Link" as the key and "customfield_10806" as value.
 // This choice has been made so that the it is easier to generate the create api request later.
 func (t *MetaIssueType) GetMandatoryFields() (map[string]string, error) {
