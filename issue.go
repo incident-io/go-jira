@@ -232,23 +232,24 @@ type IssueRenderedFields struct {
 // IssueType represents a type of a Jira issue.
 // Typical types are "Request", "Bug", "Story", ...
 type IssueType struct {
-	Self           string                   `json:"self,omitempty" structs:"self,omitempty"`
-	ID             string                   `json:"id,omitempty" structs:"id,omitempty"`
-	Description    string                   `json:"description,omitempty" structs:"description,omitempty"`
-	IconURL        string                   `json:"iconUrl,omitempty" structs:"iconUrl,omitempty"`
-	Name           string                   `json:"name,omitempty" structs:"name,omitempty"`
-	Subtask        bool                     `json:"subtask,omitempty" structs:"subtask,omitempty"`
-	AvatarID       int                      `json:"avatarId,omitempty" structs:"avatarId,omitempty"`
-	HierarchyLevel *IssueTypeHierarchyLevel `json:"hierarchyLevel,omitempty" structs:"hierarchyLevel,omitempty"`
+	Self        string `json:"self,omitempty" structs:"self,omitempty"`
+	ID          string `json:"id,omitempty" structs:"id,omitempty"`
+	Description string `json:"description,omitempty" structs:"description,omitempty"`
+	IconURL     string `json:"iconUrl,omitempty" structs:"iconUrl,omitempty"`
+	Name        string `json:"name,omitempty" structs:"name,omitempty"`
+	Subtask     bool   `json:"subtask,omitempty" structs:"subtask,omitempty"`
+	AvatarID    int    `json:"avatarId,omitempty" structs:"avatarId,omitempty"`
+	// In a default project, this will have the following values:
+	//
+	// Epic - 1
+	//
+	// Story - 0
+	//
+	// Sub-Task - -1
+	//
+	// Read more https://support.atlassian.com/jira-cloud-administration/docs/configure-the-issue-type-hierarchy/
+	HierarchyLevel *int `json:"hierarchyLevel,omitempty" structs:"hierarchyLevel,omitempty"`
 }
-
-type IssueTypeHierarchyLevel = int
-
-const (
-	IssueTypeHierarchyLevelEpic    IssueTypeHierarchyLevel = 1
-	IssueTypeHierarchyLevelTask    IssueTypeHierarchyLevel = 0
-	IssueTypeHierarchyLevelSubTask IssueTypeHierarchyLevel = -1
-)
 
 // Watches represents a type of how many and which user are "observing" a Jira issue to track the status / updates.
 type Watches struct {
@@ -653,6 +654,23 @@ func (s *IssueService) GetWithContext(ctx context.Context, issueID string, optio
 // Get wraps GetWithContext using the background context.
 func (s *IssueService) Get(issueID string, options *GetQueryOptions) (*Issue, *Response, error) {
 	return s.GetWithContext(context.Background(), issueID, options)
+}
+
+func (s *IssueService) GetIssueTypeWithContext(ctx context.Context, typeID string) (*IssueType, *Response, error) {
+	apiEndpoint := fmt.Sprintf("rest/api/2/issuetype/%s", typeID)
+	req, err := s.client.NewRequestWithContext(ctx, "GET", apiEndpoint, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	issueType := new(IssueType)
+	resp, err := s.client.Do(req, issueType)
+	if err != nil {
+		jerr := NewJiraError(resp, err)
+		return nil, resp, jerr
+	}
+
+	return issueType, resp, nil
 }
 
 // DownloadAttachmentWithContext returns a Response of an attachment for a given attachmentID.
