@@ -239,7 +239,7 @@ type IssueType struct {
 	Name           string `json:"name,omitempty" structs:"name,omitempty"`
 	Subtask        bool   `json:"subtask,omitempty" structs:"subtask,omitempty"`
 	AvatarID       int    `json:"avatarId,omitempty" structs:"avatarId,omitempty"`
-	HierarchyLevel int    `json:"hierarchyLevel,omitempty" structs:"hierarchyLevel,omitempty"`
+	HierarchyLevel *int   `json:"hierarchyLevel,omitempty" structs:"hierarchyLevel,omitempty"`
 }
 
 // Watches represents a type of how many and which user are "observing" a Jira issue to track the status / updates.
