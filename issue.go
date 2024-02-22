@@ -477,6 +477,10 @@ type IssueLinkType struct {
 	Outward string `json:"outward" structs:"outward"`
 }
 
+type IssueLinkTypeResponse struct {
+	IssueLinkTypes []IssueLinkType `json:"issueLinkTypes" structs:"issueLinkTypes"`
+}
+
 // Comments represents a list of Comment.
 type Comments struct {
 	Comments []*Comment `json:"comments,omitempty" structs:"comments,omitempty"`

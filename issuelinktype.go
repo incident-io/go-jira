@@ -17,23 +17,23 @@ type IssueLinkTypeService struct {
 // GetListWithContext gets all of the issue link types from Jira.
 //
 // Jira API docs: https://developer.atlassian.com/cloud/jira/platform/rest/v2/#api-rest-api-2-issueLinkType-get
-func (s *IssueLinkTypeService) GetListWithContext(ctx context.Context) ([]IssueLinkType, *Response, error) {
+func (s *IssueLinkTypeService) GetListWithContext(ctx context.Context) (*IssueLinkTypeResponse, *Response, error) {
 	apiEndpoint := "rest/api/2/issueLinkType"
 	req, err := s.client.NewRequestWithContext(ctx, "GET", apiEndpoint, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	linkTypeList := []IssueLinkType{}
+	linkTypeList := IssueLinkTypeResponse{}
 	resp, err := s.client.Do(req, &linkTypeList)
 	if err != nil {
 		return nil, resp, NewJiraError(resp, err)
 	}
-	return linkTypeList, resp, nil
+	return &linkTypeList, resp, nil
 }
 
 // GetList wraps GetListWithContext using the background context.
-func (s *IssueLinkTypeService) GetList() ([]IssueLinkType, *Response, error) {
+func (s *IssueLinkTypeService) GetList() (*IssueLinkTypeResponse, *Response, error) {
 	return s.GetListWithContext(context.Background())
 }
 
